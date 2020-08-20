@@ -1,51 +1,117 @@
-# /!bin/bash
+ #! /bin/bash
+ 
 
- function getdata()
-{
-   setDelimiter=' '
-   read -a arr <<<"$sortdata"
-   #echo "${arr[0]} ${arr[1]} ${arr[2]} ${arr[3]} ${arr[4]} ${arr[5]} ${arr[6]} ${arr[7]} ${arr[8]}"
-   userName="${arr[5]}"
-	ipAddress="${arr[7]}"
-	
-	if [ "${arr[5]}" == "$userName" ]&&[ "${arr[7]}" == "$ipAddress" ];
-	then
-	   temp=$userName 
+ validtime()
+ {
+  
+    IFS=':' read -r -a t1 <<< "$stime"
+    IFS=':' read -r -a t2 <<< "$etime"
+    t1=("${t1[@]##0}")
+    t2=("${t2[@]##0}")
+    if (( t1[0] > t2[0] || ( t1[0] == t2[0] && t1[1] > t2[1]) ))
+    then
+  	if (( t1[1] < t2[1] ))
+  	then
+   	  (( t1[1] += 60 ))
+   	  (( t1[0] -- ))
+  	fi
+    Hr=$(( t1[0]-t2[0] ))
+    min=$(( t1[1] - t2[1] ))
+   # echo $Hr
+    #echo $min
+    fi
+}    
+    
+ data()
+{   
+       setDelimiter=' '
+	if [[ "$username" == *"$userName"* ]]&&[[ "$ipaddress" == *"$ipAddress"* ]]&&[[ "$Hr" -le "00" ]]&&[[ "$min" -le "30" ]]
+ 	then
 	   a=`expr $a + 1`
-	       
-	else 
-	   b=$a
-	   a=0
-           echo "$b"
+	elif [[ "$username" != *"$userName"* ]]||[[ "$ipaddress" != *"$ipAddress"* ]]||[[ "$Hr" -le "00" ]]||[[ "$min" -le "30" ]]
+	then
+	   if [[ $a -ge 3 ]]
+	   then
+	     echo "$a		$userName		$ipAddress">>failrecords.txt
+	   fi
+	   a=1
+	   userName="$username"
+	   ipAddress="$ipaddress"
+	   etime=$stime
 	fi
-	
-        echo "$a $userName $ipAddress" >> login_records.txt
-   }     
-         
- counterror=$(cat /home/sanket/Desktop/Auth.log |  grep "Failed password" | wc -l )
+}
+  
 
+ 
+ 
+ #******************start of script****************# 
+ 
+ #declaration
+ error="Failed password"
+ file="/home/sanket/Desktop/Auth.log"
+ 
+ #count attempts
+ counterror=$(cat /home/sanket/Desktop/Auth.log |  grep "Failed password" | wc -l )
+ 
+ #check total failure attemts
  if [ counterror > 3 ];
  then
     echo "Failed Attempts :" $counterror
   else
      echo "Every things is Fine"
+     exit
   fi
-  
-  #Get data from Auth.log file
-  error="Failed password"
-  file="/home/sanket/Desktop/Auth.log" 
-  IFS= ':'
-   while read f1 f2 f3 f4
-   do 
-    
-   if [[ "$f4" == *"$error"* ]] ;
-   then
-     sortdata="$f4"
-     getdata
-   fi
-   done<"$file"
-  # echo "$sortdata"
-  echo "Data is successfully send to a Login_record file"
-  
  
+ #create a text file failrecords 
+  touch failrecords.txt
+  echo "FailureCount	   Username	   IpAddress ">>failrecords.txt
+ 
+  #set username, ip address, and time
+  #TOP=$(cat Auth.log | head -1)
+  TOP=`head -1 $file`
+  if [[ "$TOP" == *"$error"* ]]
+	then 
+	  attempts="$TOP"
+	  array=($attempts)
+	  userName="${arr[8]}"
+	  ipAddress="${arr[10]}"
+	  stime=${arr[2]}
+	fi
 	
+   #set time	
+   while IFS=" " read w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14
+    do 
+    	if [ "$w6" == "Failed" ]&&[ "$w7" == "password" ]
+	 then
+	     etime=$w3
+	     stime=$w3
+	     userName=$w9
+             ipAddress=$w11
+	      #validtime
+	      #data
+	       #echo "$a $etime $uname   $ip"
+	     break
+	  fi
+    done <"$file"
+    
+    while IFS=" " read ww1 ww2 ww3 ww4 ww5 ww6 ww7 ww8 ww9 ww10 ww11 ww12 ww13 ww14
+    do 
+    	if [ "$ww6" == "Failed" ]&&[ "$ww7" == "password" ]
+   	 then
+   	    	  stime=$ww3
+	    	  username=$ww9
+                 ipaddress=$ww11
+	    	   validtime
+	   	   data
+	       
+	 fi
+   done <"$file"
+   
+    if [ $a -ge 3 ];
+     then 
+         echo "$a		$userName		$ipAddress">>failrecords.txt
+         echo "Done ...... "
+         echo "Failure Attempts are send to Failrecords.txt file "
+         fi
+   
+    
