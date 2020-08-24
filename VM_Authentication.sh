@@ -6,8 +6,8 @@
   
     IFS=':' read -r -a t1 <<< "$stime"
     IFS=':' read -r -a t2 <<< "$etime"
-    t1=("${t1[@]##0}")
-    t2=("${t2[@]##0}")
+    t1=("${t1[@]}")
+    t2=("${t2[@]}")
     if (( t1[0] > t2[0] || ( t1[0] == t2[0] && t1[1] > t2[1]) ))
     then
   	if (( t1[1] < t2[1] ))
@@ -17,22 +17,23 @@
   	fi
     Hr=$(( t1[0]-t2[0] ))
     min=$(( t1[1] - t2[1] ))
-   # echo $Hr
-    #echo $min
+  
     fi
 }    
     
  data()
 {   
        setDelimiter=' '
-	if [[ "$username" == *"$userName"* ]]&&[[ "$ipaddress" == *"$ipAddress"* ]]&&[[ "$Hr" -le "00" ]]&&[[ "$min" -le "30" ]]
+	if [[ "$username" == *"$userName"* ]]&&[[ "$ipaddress" == *"$ipAddress"* ]]&&[[ "$Hr" -le "00" ]]&&[[ "$min" -le "10" ]]
  	then
+ 	  ntime=$stime
+	   #etime=$stime
 	   a=`expr $a + 1`
-	elif [[ "$username" != *"$userName"* ]]||[[ "$ipaddress" != *"$ipAddress"* ]]||[[ "$Hr" -le "00" ]]||[[ "$min" -le "30" ]]
+	elif [[ "$username" != *"$userName"* ]]||[[ "$ipaddress" != *"$ipAddress"* ]]||[[ "$Hr" -le "00" ]]||[[ "$min" -le "10" ]]
 	then
 	   if [[ $a -ge 3 ]]
 	   then
-	     echo "$a		$userName		$ipAddress">>failrecords.txt
+	     echo "|		$a		|	$ipAddress		|		$etime - $ntime		|		$userName		">>failrecords.txt
 	   fi
 	   a=1
 	   userName="$username"
@@ -40,8 +41,6 @@
 	   etime=$stime
 	fi
 }
-  
-
  
  
  #******************start of script****************# 
@@ -51,12 +50,12 @@
  file="/home/sanket/Desktop/Auth.log"
  
  #count attempts
- counterror=$(cat /home/sanket/Desktop/Auth.log |  grep "Failed password" | wc -l )
+ counterror=$(cat "/home/sanket/Desktop/Auth.log"|  grep "Failed password" | wc -l )
  
  #check total failure attemts
- if [ counterror > 3 ];
+ if [ counterror > 2 ];
  then
-    echo "Failed Attempts :" $counterror
+    echo " Total Failed Attempts :" $counterror
   else
      echo "Every things is Fine"
      exit
@@ -64,11 +63,19 @@
  
  #create a text file failrecords 
   touch failrecords.txt
-  echo "FailureCount	   Username	   IpAddress ">>failrecords.txt
+  echo "">>failrecords.txt
+  echo "*********************************************************************************************************************************************">>failrecords.txt
+  echo "| 					Executed script on: $(date)				   ">>failrecords.txt 
+  echo "______________________________________________________________________________________________________________________________________________">>failrecords.txt
+  echo "| 	  FailureCount		|	IpAddress		|			TimeSpan		|		Username	   |">>failrecords.txt
+  echo "_______________________________________________________________________________________________________________________________________________">>failrecords.txt
+   
+ 
  
   #set username, ip address, and time
   #TOP=$(cat Auth.log | head -1)
-  TOP=`head -1 $file`
+  Top=$(cat /home/sanket/Desktop/Auth.log | grep "Failed password" | head -1)
+  #TOP=`head -1 $file`
   if [[ "$TOP" == *"$error"* ]]
 	then 
 	  attempts="$TOP"
@@ -84,12 +91,8 @@
     	if [ "$w6" == "Failed" ]&&[ "$w7" == "password" ]
 	 then
 	     etime=$w3
-	     stime=$w3
 	     userName=$w9
              ipAddress=$w11
-	      #validtime
-	      #data
-	       #echo "$a $etime $uname   $ip"
 	     break
 	  fi
     done <"$file"
@@ -98,20 +101,21 @@
     do 
     	if [ "$ww6" == "Failed" ]&&[ "$ww7" == "password" ]
    	 then
-   	    	  stime=$ww3
+     	    	  stime=$ww3
 	    	  username=$ww9
                  ipaddress=$ww11
-	    	   validtime
-	   	   data
+	    	  validtime
+	   	  data
 	       
 	 fi
    done <"$file"
-   
-    if [ $a -ge 3 ];
+     if [ $a -ge 3 ];
      then 
-         echo "$a		$userName		$ipAddress">>failrecords.txt
+         echo "|		$a		|	$ipAddress		|		$etime - $ntime		|		$userName" >>failrecords.txt
+         echo "***********************************************************************************************************************************************">>failrecords.txt
          echo "Done ...... "
          echo "Failure Attempts are send to Failrecords.txt file "
          fi
+  
    
     
